@@ -6,10 +6,25 @@ const Product = require("../models/product");
 
 router.get("/", function (req, res, next) {
   Product.find()
+    .select("name price id")
     .exec()
     .then((docs) => {
-      console.log("Documents:", docs);
-      res.status(200).json(docs);
+      console.log(docs);
+      const response = {
+        count: docs.length,
+        products: docs.map((doc) => {
+          return {
+            name: doc.name,
+            price: doc.price,
+            _id: doc._id,
+            request: {
+              type: "GET",
+              url: "http://localhost:3000/products/" + doc._id,
+            },
+          };
+        }),
+      };
+      res.status(200).json(response);
     })
     .catch((err) => {
       console.log("Error retrieving documents:", err);
@@ -18,7 +33,6 @@ router.get("/", function (req, res, next) {
 });
 
 router.post("/", function (req, res, next) {
-  4;
   const product = new Product({
     _id: new mongoose.Types.ObjectId(),
     name: req.body.name,
@@ -29,8 +43,16 @@ router.post("/", function (req, res, next) {
     .then((result) => {
       console.log(result);
       res.status(201).json({
-        message: "Handling the POST request",
-        createdProduct: product,
+        message: "Created new product successfully",
+        createdProduct: {
+          name: result.name,
+          price: result.price,
+          _id: result._id,
+          request: {
+            type: "GET",
+            url: "http://localhost:3000/products/" + result._id,
+          },
+        },
       });
     })
     .catch((err) => {
@@ -42,13 +64,28 @@ router.post("/", function (req, res, next) {
 router.get("/:id", function (req, res, next) {
   const id = req.params.id;
   Product.findById(id)
+    .select("name price _id")
     .exec()
     .then((doc) => {
       console.log(doc);
       if (doc) {
-        res.status(200).json(doc);
+        res.status(200).json({
+          product: doc,
+          request: {
+            type: "GET",
+            description: "GET_ALL_PRODUCTS",
+            url: "http://localhost:3000/products/",
+          },
+        });
       } else {
-        res.status(404).json({ message: "Product not found" });
+        res.status(404).json({ 
+          message: "Product not found",
+          request: {
+            type: "GET",
+            description: "GET_ALL_PRODUCTS",
+            url: "http://localhost:3000/products/",
+          }, 
+        });
       }
     })
     .catch((err) => {
@@ -67,7 +104,13 @@ router.patch("/:id", function (req, res, next) {
     .exec()
     .then((result) => {
       console.log(result);
-      res.status(200).json(result);
+      res.status(200).json({
+        message: "Product updated successfully",
+        request: {
+          type: "GET",
+          url: "http://localhost:3000/products/" + id,
+        },
+      });
     })
     .catch((err) => {
       console.log(err);
@@ -81,7 +124,14 @@ router.delete("/:id", function (req, res, next) {
     .exec()
     .then((result) => {
       console.log(result);
-      res.status(200).json(result);
+      res.status(200).json({
+        message: "Product deleted successfully",
+        request: {
+          type: "GET",
+          description: "GET_ALL_PRODUCTS",
+          url: "http://localhost:3000/products/",
+        },
+      });
     })
     .catch((err) => {
       console.log(err);
