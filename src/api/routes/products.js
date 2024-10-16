@@ -1,12 +1,39 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./upload/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+    cb(null, true);
+  } else {
+    cb(null, false);
+    return cb(new Error("Only images are allowed!"));
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 5, // 5MB
+  },
+  fileFilter: fileFilter,
+});
 
 const Product = require("../models/product");
 
 router.get("/", function (req, res, next) {
   Product.find()
-    .select("name price id")
+    .select("name price id productImage")
     .exec()
     .then((docs) => {
       console.log(docs);
@@ -17,6 +44,7 @@ router.get("/", function (req, res, next) {
             name: doc.name,
             price: doc.price,
             _id: doc._id,
+            productImage: doc.productImage,
             request: {
               type: "GET",
               url: "http://localhost:3000/products/" + doc._id,
@@ -32,11 +60,13 @@ router.get("/", function (req, res, next) {
     });
 });
 
-router.post("/", function (req, res, next) {
+router.post("/", upload.single("productImage"), function (req, res, next) {
+  console.log(req.file);
   const product = new Product({
     _id: new mongoose.Types.ObjectId(),
     name: req.body.name,
     price: req.body.price,
+    productImage: req.file.path,
   });
   product
     .save()
@@ -64,7 +94,7 @@ router.post("/", function (req, res, next) {
 router.get("/:id", function (req, res, next) {
   const id = req.params.id;
   Product.findById(id)
-    .select("name price _id")
+    .select("name price _id productImage")
     .exec()
     .then((doc) => {
       console.log(doc);
@@ -78,13 +108,13 @@ router.get("/:id", function (req, res, next) {
           },
         });
       } else {
-        res.status(404).json({ 
+        res.status(404).json({
           message: "Product not found",
           request: {
             type: "GET",
             description: "GET_ALL_PRODUCTS",
             url: "http://localhost:3000/products/",
-          }, 
+          },
         });
       }
     })
