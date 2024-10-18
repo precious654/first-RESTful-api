@@ -1,5 +1,6 @@
 {
     "env": {
-        "MONGO_ATLAS_PW": "Preciousstar"
+        "MONGO_ATLAS_PW": "Preciousstar",
+        "JWT_SECRET": "7c6255a0376a47be0f63369de9ae69d9642e856128bb49b0c32ed1548a4af038"
     }
 }
